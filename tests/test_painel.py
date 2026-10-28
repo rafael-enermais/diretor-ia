@@ -40,7 +40,7 @@ def test_periodo_e_datas():
     por = md.agrupar_por_item(ATUAIS)
     assert md.periodo_recente(por["I22"]) == "2026-09"
     assert md.ultima_atualizacao(por["I22"]).day == 3
-    assert md.contar_status(["No alvo", "No alvo", "?"]) == {"Fora da meta": 0, "Atenção": 0, "No alvo": 2, "Sem lançamento": 1}
+    assert md.contar_status(["No alvo", "No alvo", "?"]) == {"Fora da meta": 0, "Atenção": 0, "No alvo": 2, "Sem meta": 0, "Sem lançamento": 1}
 
 
 def test_catalogo_categorias():
@@ -80,3 +80,41 @@ def test_prontidao():
     assert ps["Existe no app"]["Já recebendo dado"] == 1 and ps["Parcial"]["Já recebendo dado"] == 0 and ps["Falta construir"]["Já recebendo dado"] == 1
     assert {r["App / sistema"] for r in prontidao.por_fonte(ITENS, por)} == {"GDF", "TIA.go"}
     assert [r["ID"] for r in prontidao.sem_dado_ainda(ITENS, por)] == ["I02"]
+
+
+def test_valor_sem_meta_conta_como_com_valor():
+    """Achado do teste ao vivo (28/10/2026): indicador com valor gravado mas status 'Sem lançamento' (meta so informativa) era contado como sem dado."""
+    linha = {"item_id": "I22", "unidade": "R$", "periodo": "2026-10", "realizado": 3297920.18, "meta": "Informativo", "status": "Sem lançamento", "atualizado_em": None}
+    assert md.tem_valor(linha) and not md.tem_valor({"realizado": None, "numerador": None})
+    assert md.status_do_item([linha]) == "Sem meta"
+    assert md.status_do_item([linha, {"status": "Atenção"}]) == "Atenção"
+    assert md.status_do_item([{"status": "Sem lançamento", "realizado": None}]) == "Sem lançamento"
+    itens = [ITENS[2]]                                                                    # I22
+    r = painel.resumo_geral(itens, {"I22": [linha]})
+    assert r["ind_com_valor"] == 1 and r["status_indicadores"]["Sem meta"] == 1
+    assert painel.tabela_indicadores(itens, {"I22": [linha]})[0]["Status"] == "🔵 Sem meta"
+    ps = {x["Situação"]: x for x in prontidao.por_situacao(itens, {"I22": [linha]})}
+    assert ps["Falta construir"]["Já recebendo dado"] == 1
+
+
+def test_apps_da_fonte():
+    f = prontidao.apps_da_fonte
+    assert f("GDF (aba Obras)") == ["GDF"] and f("GDF + EGC + Dexie") == ["GDF", "EGC", "Dexie"]
+    assert f("Novo (hoje sem sistema)") == ["Novo"] and f("—") == ["Sem definição"] and f(None) == ["Sem definição"]
+    assert f("GDF (Indicadores financeiros) + TIA.go") == ["GDF", "TIA.go"]
+    assert f("EGC (Notas Fiscais × Sienge)") == ["EGC"]
+
+
+def test_diagnostico_sem_acesso_ao_schema_gdf_e_ok():
+    import diagnostico
+
+    class InsufficientPrivilege(Exception):
+        pass
+
+    class B:
+        def consultar(self, sql, params=None):
+            if "gdf.metrica_registro" in sql:
+                raise InsufficientPrivilege("permission denied for schema gdf")
+            return [{"u": "app_diretoria", "n": 0}]
+    res = {r["verificacao"]: r for r in diagnostico.rodar(B())}
+    assert res["Tabelas do GDF fechadas"]["ok"] is True

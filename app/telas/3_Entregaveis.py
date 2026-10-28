@@ -27,6 +27,6 @@ if prazo:
 if apur:
     df = df[df["Apuração"].isin(apur)]
 st.caption(f"{len(df)} de {len(linhas)} entregáveis")
-st.dataframe(df, hide_index=True, width="stretch")
+st.dataframe(df, hide_index=True, width="stretch", height=min(35 * (len(df) + 1) + 3, 640))
 st.caption("«Apuração»: Checklist = alguém confirma que fez; Medido nos dados = o app mede sozinho; Misto = os dois. Sem resultado gravado, aparece «Sem lançamento».")
 base.botao_atualizar()

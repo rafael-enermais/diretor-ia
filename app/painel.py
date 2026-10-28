@@ -84,7 +84,7 @@ def resumo_por_categoria(itens, por_item: dict) -> list:
         sts = [md.status_do_item(por_item.get(i["item_id"], [])) for i in ind]
         c = md.contar_status(sts)
         saida.append({"Categoria": cat, "Indicadores": len(ind), "Com valor": sum(v for k, v in c.items() if k != "Sem lançamento"),
-                      "🟢 No alvo": c["No alvo"], "🟡 Atenção": c["Atenção"], "🔴 Fora da meta": c["Fora da meta"], "⚪ Sem lançamento": c["Sem lançamento"]})
+                      "🟢 No alvo": c["No alvo"], "🟡 Atenção": c["Atenção"], "🔴 Fora da meta": c["Fora da meta"], "🔵 Sem meta (informativo)": c["Sem meta"], "⚪ Sem lançamento": c["Sem lançamento"]})
     return saida
 
 

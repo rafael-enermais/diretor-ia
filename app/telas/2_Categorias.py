@@ -51,6 +51,13 @@ else:
             base.falha(banco, "categorias", "ler_historico", exc, usuario)
             hist = []
         if hist:
+            serie = {}
+            for h in hist:
+                if not (h.get("empresa") or h.get("obra") or h.get("un")) and h.get("realizado") is not None:
+                    serie[h["periodo"]] = float(h["realizado"])
+            if len(serie) >= 2:
+                st.line_chart(pd.Series(serie).sort_index(), height=220)
+                st.caption("Evolução do valor realizado (só indicadores sem divisão por empresa/obra/UN).")
             st.dataframe(pd.DataFrame(painel.linhas_detalhe([{**h, "detalhe": None} for h in hist])).drop(columns=["Atualizado"]), hide_index=True, width="stretch")
         else:
             st.caption("Sem histórico.")

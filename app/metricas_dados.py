@@ -3,7 +3,8 @@
 mostra o valor gravado, o status que o GDF decidiu e a data da gravacao. Quando um item tem varias linhas (empresa/obra/UN), mostra as linhas; nao soma."""
 from __future__ import annotations
 
-PRIORIDADE = ["Fora da meta", "Atenção", "No alvo", "Sem lançamento"]       # do pior para o melhor; "Sem lançamento" so vale se nada mais existe
+PRIORIDADE = ["Fora da meta", "Atenção", "No alvo", "Sem meta", "Sem lançamento"]       # do pior para o melhor
+# "Sem meta" = ha valor gravado, mas o GDF nao tem meta numerica para julgar (indicador informativo): conta como COM valor.
 
 _SQL_ATUAL = """SELECT item_id, indicador, dono, unidade, periodo, empresa, obra, un, app_origem, meta, previsto, realizado,
                        numerador, denominador, pct_atingimento, status, origem, detalhe, atualizado_em
@@ -28,13 +29,20 @@ def agrupar_por_item(linhas) -> dict:
     return saida
 
 
+def tem_valor(linha) -> bool:
+    """True se a linha tem numero gravado (realizado ou numerador), mesmo sem meta para julgar."""
+    return any(linha.get(k) is not None for k in ("realizado", "numerador"))
+
+
 def status_do_item(linhas) -> str:
-    """Status unico do item: o PIOR entre as linhas (Fora da meta > Atencao > No alvo). Sem linha, ou so 'Sem lancamento': 'Sem lançamento'."""
-    achados = {l.get("status") for l in (linhas or [])}
-    for s in PRIORIDADE:
+    """Status unico do item: o PIOR entre as linhas (Fora da meta > Atencao > No alvo). Se nenhuma linha tem status de meta mas ha valor gravado: 'Sem meta'
+    (informativo). Sem linha ou sem valor: 'Sem lançamento'."""
+    linhas = linhas or []
+    achados = {l.get("status") for l in linhas}
+    for s in ("Fora da meta", "Atenção", "No alvo"):
         if s in achados:
             return s
-    return "Sem lançamento"
+    return "Sem meta" if any(tem_valor(l) for l in linhas) else "Sem lançamento"
 
 
 def periodo_recente(linhas) -> str | None:

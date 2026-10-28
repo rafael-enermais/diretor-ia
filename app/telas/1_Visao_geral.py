@@ -26,11 +26,12 @@ c4.metric("Entregáveis com resultado", f'{r["ent_com_valor"]} de {r["entregas"]
 
 st.subheader("Situação dos indicadores")
 s = r["status_indicadores"]
-k1, k2, k3, k4 = st.columns(4)
+k1, k2, k3, k4, k5 = st.columns(5)
 k1.metric("🟢 No alvo", s["No alvo"])
 k2.metric("🟡 Atenção", s["Atenção"])
 k3.metric("🔴 Fora da meta", s["Fora da meta"])
-k4.metric("⚪ Sem lançamento", s["Sem lançamento"], help="Ainda não chegou valor deste indicador. Não significa que esteja ruim: significa que falta o dado.")
+k4.metric("🔵 Só informativo", s["Sem meta"], help="Já tem valor gravado, mas o app de origem ainda não tem meta numérica para julgar (por exemplo, contas a receber).")
+k5.metric("⚪ Sem lançamento", s["Sem lançamento"], help="Ainda não chegou valor deste indicador. Não significa que esteja ruim: significa que falta o dado.")
 
 if r["ind_com_valor"] == 0:
     st.info("Nenhum indicador recebeu valor ainda. Conforme cada app de origem (por exemplo, o GDF) gravar o mês, os números aparecem aqui sozinhos. "

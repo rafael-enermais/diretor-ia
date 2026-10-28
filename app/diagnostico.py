@@ -48,7 +48,12 @@ def rodar(banco) -> list:
         return len(linhas) == 4 and not sem, f"{len(linhas)} tabelas conferidas; sem proteção de linha: {', '.join(sem) or 'nenhuma'}"
 
     def gdf_fechado():
-        r = banco.consultar("SELECT has_table_privilege('app_diretoria','gdf.metrica_registro','SELECT') AS a")[0]
+        try:
+            r = banco.consultar("SELECT has_table_privilege('app_diretoria','gdf.metrica_registro','SELECT') AS a")[0]
+        except Exception as exc:                                # noqa: BLE001
+            if type(exc).__name__ == "InsufficientPrivilege":   # nem o schema gdf o app enxerga: e' o ideal
+                return True, "sem acesso ao schema do GDF (esperado: o app só lê as visões do schema diretoria)"
+            raise
         return not r["a"], "sem acesso direto às tabelas do GDF (esperado: só as visões)"
 
     return [

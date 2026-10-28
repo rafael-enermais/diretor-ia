@@ -23,7 +23,9 @@ st.dataframe(pd.DataFrame(prontidao.por_situacao(itens, por_item)), hide_index=T
 st.caption("Existe no app = já calculado em algum app · Parcial = falta ligar/ajustar · Falta construir = ainda não existe · Input manual = alguém digita.")
 
 st.subheader("Por app / sistema de origem")
-st.dataframe(pd.DataFrame(prontidao.por_fonte(itens, por_item)), hide_index=True, width="stretch")
+fontes = pd.DataFrame(prontidao.por_fonte(itens, por_item))
+st.dataframe(fontes, hide_index=True, width="stretch", height=min(35 * (len(fontes) + 1) + 3, 520))
+st.caption("Um indicador que depende de mais de um app aparece em cada um deles; por isso a soma passa de 54.")
 
 with st.expander("Indicadores que ainda não receberam valor"):
     st.dataframe(pd.DataFrame(prontidao.sem_dado_ainda(itens, por_item)), hide_index=True, width="stretch")

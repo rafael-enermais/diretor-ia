@@ -33,12 +33,23 @@ def por_situacao(itens, por_item: dict) -> list:
     return saida
 
 
+def apps_da_fonte(texto) -> list:
+    """'GDF (aba Obras)' -> ['GDF'];  'GDF + EGC + Dexie' -> ['GDF', 'EGC', 'Dexie'];  'Novo (hoje sem sistema)' -> ['Novo'];  vazio -> ['Sem definição'].
+    Tira o que esta entre parenteses (aba/detalhe) para agrupar pelo app, nao pelo texto livre da matriz."""
+    import re
+    t = re.sub(r"\([^)]*\)", " ", str(texto or ""))
+    partes = [p.strip(" .") for p in re.split(r"\s*(?:\+|/|;|,)\s*", t) if p.strip(" .")]
+    partes = [p for p in partes if p not in ("—", "-")]
+    return list(dict.fromkeys(partes)) or ["Sem definição"]
+
+
 def por_fonte(itens, por_item: dict) -> list:
-    """Uma linha por 'app/sistema candidato' (texto da matriz): quantos indicadores dependem dele e quantos ja recebem dado."""
+    """Uma linha por app/sistema de origem. Um indicador que depende de mais de um app aparece em cada um deles."""
     ind = catalogo.indicadores(itens)
     grupos: dict = {}
     for i in ind:
-        grupos.setdefault((i.get("app_origem") or "—").strip(), []).append(i)
+        for app in apps_da_fonte(i.get("app_origem")):
+            grupos.setdefault(app, []).append(i)
     saida = []
     for fonte, grupo in sorted(grupos.items(), key=lambda kv: (-len(kv[1]), kv[0])):
         com = sum(1 for i in grupo if md.status_do_item(por_item.get(i["item_id"], [])) != "Sem lançamento")

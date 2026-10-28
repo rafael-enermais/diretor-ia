@@ -24,6 +24,7 @@ O painel **só lê** o que os outros apps já calcularam (por exemplo, o GDF). E
 - 🟢 **No alvo** — dentro da meta.
 - 🟡 **Atenção** — perto do limite da meta.
 - 🔴 **Fora da meta** — fora da meta.
+- 🔵 **Só informativo** — já tem valor gravado, mas o app de origem não tem meta numérica para julgar (por exemplo, contas a receber). Conta como «com valor».
 - ⚪ **Sem lançamento** — o dado ainda não chegou. *Não significa que esteja ruim: significa que falta o número.*
 - Quando um indicador tem mais de uma linha (por empresa ou obra), o status do indicador é o **pior** entre elas, e o detalhe mostra cada linha.
 

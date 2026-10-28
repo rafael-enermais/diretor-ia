@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-STATUS_ICONE = {"No alvo": "🟢", "Atenção": "🟡", "Fora da meta": "🔴", "Sem lançamento": "⚪"}
+STATUS_ICONE = {"No alvo": "🟢", "Atenção": "🟡", "Fora da meta": "🔴", "Sem meta": "🔵", "Sem lançamento": "⚪"}
 STATUS_SEM = "Sem lançamento"
 
 

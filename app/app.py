@@ -16,7 +16,7 @@ estilo.aplicar()
 usuario = auth.require_login(registrar_falha=lambda: logs_app.registrar(get_banco(), "aviso", "login", "falha_login", "Tentativa de login inválida"))
 papel = base.resolver_papel(usuario)           # st.stop() aqui se nao tem acesso ativo
 
-st.sidebar.caption(f"Logado como **{usuario}**")
+st.sidebar.caption(f"Logado como `{usuario}`")
 if st.sidebar.button("Sair"):
     logs_app.registrar(get_banco(), "evento", "acesso", "logout", "Saída do painel", usuario=usuario)
     auth.sair()
