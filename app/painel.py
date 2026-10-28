@@ -101,3 +101,31 @@ def linhas_detalhe(linhas_metrica) -> list:
             "Como foi apurado": l.get("origem") or "—", "Atualizado": fmt_br(l.get("atualizado_em")),
         })
     return saida
+
+
+def itens_com_serie(itens, hist) -> list:
+    """Indicadores que tem historico mensal 'geral' (sem divisao por empresa/obra/UN): [{'id','nome','unidade','meses'}], na ordem do catalogo."""
+    unidades = {}
+    for l in hist or []:
+        unidades.setdefault(l.get("item_id"), l.get("unidade"))
+    saida = []
+    for i in catalogo.indicadores(itens):
+        serie = md.serie_geral(hist, i["item_id"])
+        if serie:
+            saida.append({"id": i["item_id"], "nome": i["nome"], "unidade": unidades.get(i["item_id"]) or "", "meses": len(serie)})
+    return saida
+
+
+def tabela_series(hist, ids) -> dict:
+    """{periodo: {item_id: valor}} para o grafico lado a lado (so' linhas gerais)."""
+    saida: dict = {}
+    for item_id in ids:
+        for periodo, valor in md.serie_geral(hist, item_id):
+            saida.setdefault(periodo, {})[item_id] = valor
+    return dict(sorted(saida.items()))
+
+
+def pontos_de_atencao(itens, por_item: dict) -> list:
+    """Indicadores em Atencao ou Fora da meta, os piores primeiro."""
+    linhas = [l for l in tabela_indicadores(itens, por_item) if l["Status"].endswith(("Atenção", "Fora da meta"))]
+    return sorted(linhas, key=lambda l: (0 if l["Status"].endswith("Fora da meta") else 1, l["ID"]))

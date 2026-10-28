@@ -88,6 +88,28 @@ def carregar_painel(banco, tela: str, usuario: str):
     return itens, atuais, md.agrupar_por_item(atuais)
 
 
+@st.cache_data(ttl=CACHE_SEGUNDOS, show_spinner=False)
+def _historico(_banco, chave: int):
+    return md.ler_historico_geral(_banco)
+
+
+def carregar_historico(banco, tela: str, usuario: str) -> list:
+    """Historico mensal de todos os itens (cache de 60 s). Erro => mensagem com codigo."""
+    try:
+        return _historico(banco, st.session_state.get("_dir_refresh", 0))
+    except Exception as exc:                                    # noqa: BLE001
+        falha(banco, tela, "carregar_historico", exc, usuario)
+        return []
+
+
+def segredo(nome: str) -> str:
+    """Valor de um secret (ou vazio). Nunca mostrar na tela."""
+    try:
+        return str(st.secrets[nome]).strip()
+    except Exception:                                           # noqa: BLE001
+        return ""
+
+
 def botao_atualizar() -> None:
     if st.button("Atualizar agora", help="Relê o banco (o painel já se atualiza sozinho a cada 1 minuto)."):
         st.session_state["_dir_refresh"] = st.session_state.get("_dir_refresh", 0) + 1

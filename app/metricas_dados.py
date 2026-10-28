@@ -13,6 +13,25 @@ _SQL_HIST = """SELECT item_id, periodo, empresa, obra, un, app_origem, unidade, 
                FROM diretoria.metricas WHERE item_id = %s ORDER BY periodo DESC, empresa, obra, un LIMIT 240"""
 
 
+_SQL_HIST_GERAL = """SELECT item_id, periodo, empresa, obra, un, app_origem, unidade, meta, realizado, pct_atingimento, status, atualizado_em
+                     FROM diretoria.metricas ORDER BY item_id, periodo LIMIT 5000"""
+
+
+def ler_historico_geral(banco) -> list:
+    """Todo o historico mensal de todos os itens (para o painel executivo e o chat)."""
+    return banco.consultar(_SQL_HIST_GERAL)
+
+
+def serie_geral(linhas_hist, item_id: str) -> list:
+    """[(periodo, realizado float)] do item, so' das linhas 'gerais' (sem empresa/obra/UN) e com valor. Se o item e' dividido por empresa/obra/UN a serie e' vazia
+    (o painel nao soma por conta propria)."""
+    saida = {}
+    for l in linhas_hist or []:
+        if l.get("item_id") == item_id and not (l.get("empresa") or l.get("obra") or l.get("un")) and l.get("realizado") is not None:
+            saida[l["periodo"]] = float(l["realizado"])
+    return sorted(saida.items())
+
+
 def ler_atuais(banco) -> list:
     return banco.consultar(_SQL_ATUAL)
 
