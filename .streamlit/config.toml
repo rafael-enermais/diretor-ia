@@ -1,0 +1,11 @@
+# Tema FIXO CLARO com as cores da marca EnerMais: azul #171C60 e laranja #F99D20 (todo mundo ve igual).
+[theme]
+base = "light"
+primaryColor = "#171C60"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F3F5F9"
+textColor = "#1B1F3B"
+linkColor = "#171C60"
+
+[browser]
+gatherUsageStats = false

@@ -1,0 +1,7 @@
+# Versoes FIXAS (as mesmas que rodam em producao no GDF / Streamlit Cloud, Python 3.14).
+# Com ">=" cada redeploy puxa a versao mais nova e uma atualizacao pode quebrar o app sem ninguem ter mexido no codigo.
+streamlit==1.66.1
+supabase==2.32.0
+psycopg2-binary==2.9.13
+pandas==3.0.6
+tzdata==2025.2

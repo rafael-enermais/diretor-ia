@@ -1,0 +1,30 @@
+# segredos
+.env
+.env.*
+secrets.toml
+.streamlit/secrets.toml
+*.pem
+*.key
+config.txt
+token*.txt
+# caches
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+*.log
+# orientacao local da sessao (tem caminho do vault): fica so no computador
+CLAUDE.md
+# saidas do Claude e dados reais NUNCA no repositorio (repositorio PUBLICO)
+Claude outputs/
+entrada*/
+planilhas/
+dados/
+sql_interno/
+*.zip
+*.exe
+*.xlsx
+*.xlsm
+*.csv
+*.pdf
