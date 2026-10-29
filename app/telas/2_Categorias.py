@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 import base
+import graficos
 import catalogo
 import metricas_dados as md
 import painel
@@ -56,7 +57,7 @@ else:
                 if not (h.get("empresa") or h.get("obra") or h.get("un")) and h.get("realizado") is not None:
                     serie[h["periodo"]] = float(h["realizado"])
             if len(serie) >= 2:
-                st.line_chart(pd.Series(serie).sort_index(), height=220)
+                graficos.mostrar_linhas(pd.Series(serie, name="Realizado").sort_index(), altura=220)
                 st.caption("Evolução do valor realizado (só indicadores sem divisão por empresa/obra/UN).")
             st.dataframe(pd.DataFrame(painel.linhas_detalhe([{**h, "detalhe": None} for h in hist])).drop(columns=["Atualizado"]), hide_index=True, width="stretch")
         else:

@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 
 import base
+import graficos
 import chat_core as CC
 import chat_ferramentas as FERR
 import chat_memoria as MEM
@@ -67,9 +68,9 @@ def desenhar_grafico(g, tabela):
     if g.get("titulo"):
         st.caption(g["titulo"])
     if g["tipo"] == "linhas":
-        st.line_chart(df, height=280)
+        graficos.mostrar_linhas(df, altura=280)
     else:
-        st.bar_chart(df, horizontal=g["tipo"] == "barras_horizontais", height=280)
+        graficos.mostrar_barras(df, altura=280, horizontal=g["tipo"] == "barras_horizontais")
 
 
 desenhar_grafico(estado.get("grafico"), estado.get("ultima_tabela"))

@@ -5,6 +5,7 @@ import pandas as pd
 import streamlit as st
 
 import base
+import graficos
 import metricas_dados as md
 import painel
 import previsao
@@ -46,7 +47,7 @@ def corpo():
     st.subheader("Situação por categoria")
     cats = pd.DataFrame(painel.resumo_por_categoria(itens, por_item)).set_index("Categoria")
     colunas = ["🟢 No alvo", "🟡 Atenção", "🔴 Fora da meta", "🔵 Sem meta (informativo)", "⚪ Sem lançamento"]
-    st.bar_chart(cats[colunas], stack=True, horizontal=True, color=CORES, height=330)
+    graficos.mostrar_barras(cats[colunas], altura=330, horizontal=True, empilhar=True, cores=CORES)
     st.caption("Quanto mais azul/cinza, mais falta chegar meta ou valor dos apps de origem. O painel cresce conforme cada app é terminado.")
 
     st.subheader("Evolução e tendência")
@@ -61,7 +62,7 @@ def corpo():
     df = pd.DataFrame({"Realizado": dict(serie)})
     if tend["ok"]:
         df = df.join(pd.DataFrame({"Tendência": dict([(serie[-1][0], serie[-1][1])] + tend["proximos"])}), how="outer")
-    st.line_chart(df.sort_index(), height=300)
+    graficos.mostrar_linhas(df.sort_index(), altura=300)
     if tend["ok"]:
         k1, k2, k3 = st.columns(3)
         k1.metric("Direção", tend["direcao"].capitalize())
@@ -79,7 +80,7 @@ def corpo():
             st.warning("Os indicadores escolhidos têm unidades diferentes (por exemplo, R$ e %). Escolha indicadores na mesma unidade para comparar.")
         else:
             tab = painel.tabela_series(hist, [y["id"] for y in sel])
-            st.line_chart(pd.DataFrame.from_dict(tab, orient="index").rename(columns={y["id"]: f'{y["id"]} · {y["nome"]}' for y in sel}), height=300)
+            graficos.mostrar_linhas(pd.DataFrame.from_dict(tab, orient="index").rename(columns={y["id"]: f'{y["id"]} · {y["nome"]}' for y in sel}).sort_index(), altura=300)
             st.caption("Lado a lado, sem recalcular: cada linha é o valor gravado pelo app de origem.")
 
 
