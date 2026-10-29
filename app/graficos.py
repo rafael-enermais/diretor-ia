@@ -21,7 +21,10 @@ def _longo(df: pd.DataFrame, nome_x: str = "Categoria") -> pd.DataFrame:
     d = df.copy()
     d.index = d.index.map(str)
     d = d.rename_axis(nome_x).reset_index()
-    return d.melt(id_vars=nome_x, var_name="Serie", value_name="Valor").dropna(subset=["Valor"])
+    longo = d.melt(id_vars=nome_x, var_name="Serie", value_name="Valor").dropna(subset=["Valor"])
+    posicao = {str(c): i for i, c in enumerate(df.columns)}
+    longo["Ordem"] = longo["Serie"].map(lambda c: posicao.get(str(c), 0))
+    return longo
 
 
 def construir_linhas(df: pd.DataFrame, altura: int = 300, nome_x: str = "Período"):
@@ -60,7 +63,7 @@ def construir_barras(df: pd.DataFrame, altura: int = 300, horizontal: bool = Fal
             cat,
             val,
             color=alt.Color("Serie:N", sort=ordem_series, scale=escala, legend=alt.Legend(title=None, orient="bottom") if len(ordem_series) > 1 else None),
-            order=alt.Order("Serie:N"),
+            order=alt.Order("Ordem:Q", sort="ascending"),  # pilha na ordem das colunas (verde, amarelo, vermelho, azul, cinza)
             tooltip=[alt.Tooltip("Categoria:N"), alt.Tooltip("Serie:N", title="Série"), alt.Tooltip("Valor:Q", format=",.2f")],
         )
         .properties(height=altura)
