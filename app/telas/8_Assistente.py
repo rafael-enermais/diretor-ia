@@ -74,7 +74,8 @@ def desenhar_grafico(g, tabela):
 
 desenhar_grafico(estado.get("grafico"), estado.get("ultima_tabela"))
 
-pergunta = pendente or st.chat_input("Pergunte ao assistente…", max_chars=CC.MAX_PERGUNTA)
+digitada = st.chat_input("Pergunte ao assistente…", max_chars=CC.MAX_PERGUNTA)  # sempre desenhada (v0.2.1): antes, clicar numa sugestão escondia a caixa
+pergunta = pendente or digitada
 if pergunta:
     limite_ok = (MEM.perguntas_hoje(banco, usuario) < MEM.LIMITE_PERGUNTAS_DIA) if inst else (S["dir_chat_n"] < 40)
     if not limite_ok:
