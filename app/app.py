@@ -27,7 +27,7 @@ paginas = [
     st.Page("telas/2_Painel_executivo.py", title="Painel executivo", icon="📊", url_path="painel"),
     st.Page("telas/2_Categorias.py", title="Categorias", icon="🗂️", url_path="categorias"),
     st.Page("telas/3_Entregaveis.py", title="Entregáveis", icon="📋", url_path="entregaveis"),
-    st.Page("telas/4_Reports_recebidos.py", title="Reports recebidos", icon="📨", url_path="reports"),
+    st.Page("telas/4_Reports_recebidos.py", title="Reports e pendências", icon="📨", url_path="reports"),
     st.Page("telas/5_Prontidao_fontes.py", title="Prontidão e fontes", icon="🔌", url_path="prontidao"),
     st.Page("telas/8_Assistente.py", title="Assistente (IA)", icon="🤖", url_path="assistente"),
     st.Page("telas/6_Ajuda.py", title="Ajuda", icon="❓", url_path="ajuda"),

@@ -19,7 +19,7 @@ O painel **só lê** o que os outros apps já calcularam (por exemplo, o GDF). E
 - **Assistente (IA)** — converse em português sobre os indicadores e entregáveis (o que está fora da meta, a evolução e a tendência de um indicador, prazos). Ele **só lê** o que o painel mostra, não grava nada, não mostra links e avisa quando um valor da resposta não bate com as consultas. Avisa quando você passa de 60 perguntas no dia (cada uma usa crédito da IA) e só para em 200, como segurança.
 - **Categorias** — escolha uma categoria para ver cada indicador, o último valor, a meta e o status. Abra o detalhe para ver como o número foi apurado e o histórico mês a mês.
 - **Entregáveis** — os entregáveis, com responsável, prazo, meta e resultado quando houver.
-- **Reports recebidos** — um registro simples dos reports semanais que você recebeu (quem enviou, resumo, dificuldades). Nenhum campo é obrigatório: a tabela é editável na própria tela, e «Arquivar» tira da lista sem apagar (dá para restaurar). O report completo fica no app de quem o escreve.
+- **Reports e pendências** — as dificuldades, pendências, problemas e evoluções que os colaboradores relatam (chegam dos outros apps ou você digita). Cada item tem tipo, urgência (baixa a crítica), situação (nova, em acompanhamento, resolvida, arquivada) e uma nota sua. Nenhum campo é obrigatório: edite direto na tabela, e a situação «Arquivada» tira da lista sem apagar. Cada mudança fica guardada no histórico, e a aba Evolução mostra novos × resolvidos, itens por semana e quem tem mais itens em aberto.
 - **Prontidão e fontes** — o que já está ligado a uma fonte e recebendo dado, e o que ainda falta chegar.
 
 **Como ler o status**

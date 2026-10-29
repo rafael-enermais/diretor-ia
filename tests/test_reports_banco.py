@@ -1,9 +1,17 @@
 # -*- coding: utf-8 -*-
 import datetime as dt
 
+import chat_ferramentas as FERR
 import reports
 from banco import Banco
 from fakes import BancoFalso
+
+HOJE = dt.date(2026, 10, 29)
+
+
+def _item(id_, colab="Fulana Silva", semana=dt.date(2026, 10, 26), tipo="dificuldade", urg="media", sit="nova", recebido=dt.datetime(2026, 10, 27, 9), resolvido=None, titulo="t"):
+    return {"id": id_, "origem": "manual", "id_externo": None, "colaborador": colab, "semana_de": semana, "tipo": tipo, "urgencia": urg, "situacao": sit, "titulo": titulo,
+            "descricao": "d", "nota_diretor": None, "recebido_em": recebido, "resolvido_em": resolvido, "criado_por": "u", "atualizado_em": recebido, "atualizado_por": None}
 
 
 def test_segunda_da_semana():
@@ -11,33 +19,111 @@ def test_segunda_da_semana():
     assert reports.segunda_da_semana(dt.date(2026, 10, 26)) == dt.date(2026, 10, 26)
 
 
+def test_instalado_so_com_as_duas_tabelas():
+    assert reports.instalado(BancoFalso([[{"a": True, "b": True}]])) is True
+    assert reports.instalado(BancoFalso([[{"a": True, "b": False}]])) is False
+    assert reports.instalado(BancoFalso([[]])) is False
+    assert reports.instalado(BancoFalso(falhar=True)) is False                              # erro de banco: a tela explica, nao quebra
+
+
 def test_validar_nao_bloqueia_e_avisa():
-    d, av = reports.validar({"semana_de": dt.date(2026, 10, 29), "de_quem": "  Fulano  ", "resumo": "ok\x00", "dificuldades": "", "recebido_em": None, "status": "tratado"})
-    assert not av and d["semana_de"] == dt.date(2026, 10, 26) and d["de_quem"] == "Fulano" and d["resumo"] == "ok" and d["dificuldades"] is None
-    # tudo em branco/estranho: salva do mesmo jeito, com valores padrao e avisos em linguagem simples
-    d, av = reports.validar({"semana_de": None, "de_quem": "x", "status": "?"}, dt.date(2026, 10, 29))
-    assert len(av) == 2 and d["de_quem"] == reports.SEM_NOME and d["semana_de"] == dt.date(2026, 10, 26) and d["status"] == "recebido"
+    d, av = reports.validar({"colaborador": "  Fulano  ", "semana_de": dt.date(2026, 10, 29), "tipo": "problema", "urgencia": "alta", "situacao": "acompanhamento",
+                             "titulo": "ok\x00", "descricao": "", "nota_diretor": None}, HOJE)
+    assert not av and d["colaborador"] == "Fulano" and d["semana_de"] == dt.date(2026, 10, 26) and d["titulo"] == "ok" and d["descricao"] is None
+    assert (d["tipo"], d["urgencia"], d["situacao"]) == ("problema", "alta", "acompanhamento")
+    # tudo em branco/estranho: salva do mesmo jeito, com padroes e avisos em linguagem simples
+    d, av = reports.validar({"colaborador": "x", "semana_de": None, "tipo": "?", "urgencia": "?", "situacao": "?"}, HOJE)
+    assert len(av) == 2 and d["colaborador"] == reports.SEM_NOME and d["semana_de"] == dt.date(2026, 10, 26)
+    assert (d["tipo"], d["urgencia"], d["situacao"]) == ("dificuldade", "media", "nova")
     d, av = reports.validar({}, dt.date(2026, 10, 28))
-    assert d["de_quem"] == reports.SEM_NOME and d["resumo"] is None and d["recebido_em"] is None
-    d, av = reports.validar({"semana_de": dt.date(2026, 10, 26), "de_quem": "Fulano", "resumo": "a" * 5000})
-    assert not av and len(d["resumo"]) == 4000
+    assert d["colaborador"] == reports.SEM_NOME and d["titulo"] is None and d["nota_diretor"] is None
+    d, av = reports.validar({"colaborador": "Fulano", "semana_de": dt.date(2026, 10, 26), "titulo": "a" * 500, "descricao": "a" * 5000})
+    assert not av and len(d["titulo"]) == 200 and len(d["descricao"]) == 4000
 
 
-def test_criar_revisar_arquivar_restaurar_sem_delete():
-    dados, _ = reports.validar({"semana_de": dt.date(2026, 10, 26), "de_quem": "Fulano"})
+def test_criar_item_e_historico_num_comando_so():
+    dados, _ = reports.validar({"colaborador": "Fulana", "semana_de": dt.date(2026, 10, 26), "situacao": "resolvida"}, HOJE)
     b = BancoFalso()
     reports.criar(b, "u@x.com", dados)
-    assert b.comandos[0][0].lstrip().upper().startswith("INSERT")
-    reports.revisar(b, "u@x.com", 7, dados, "corrigi a semana")
+    sql, params = b.comandos[0]
+    assert len(b.comandos) == 1 and sql.lstrip().upper().startswith("WITH") and "report_item_historico" in sql and "DELETE" not in sql.upper()
+    assert "Fulana" in params and "u@x.com" in params and "resolvida" in params
+
+
+def test_diferencas_ignora_vazio_igual_none():
+    a = _item(1)
+    a["nota_diretor"] = None
+    novo = {c: a[c] for c in reports.CAMPOS}
+    assert reports.diferencas(a, novo) == []
+    novo["nota_diretor"] = "   "                                                        # espacos = vazio = None: nao e' mudanca
+    assert reports.diferencas(a, novo) == []
+    novo["urgencia"], novo["nota_diretor"] = "alta", "ligar hoje"
+    assert [c for c, _, _ in reports.diferencas(a, novo)] == ["urgencia", "nota_diretor"]
+
+
+def test_atualizar_grava_so_o_que_mudou_com_historico_e_sem_delete():
+    a = _item(5)
+    novo = {c: a[c] for c in reports.CAMPOS}
+    b = BancoFalso()
+    assert reports.atualizar(b, "u@x.com", 5, a, novo) == 0 and not b.transacoes         # nada mudou: nao grava nada
+    novo.update(urgencia="critica", situacao="resolvida")
+    assert reports.atualizar(b, "u@x.com", 5, a, novo) == 2
     tx = b.transacoes[0]
-    assert [c[0].lstrip().split()[0].upper() for c in tx] == ["INSERT", "UPDATE"]        # na MESMA transacao; nenhum DELETE
-    assert tx[0][1][-1] == 7 and tx[1][1][-1] == 7 and tx[1][1][1] == "corrigi a semana"
-    reports.revisar(b, "u@x.com", 8, dados)                                              # motivo e' opcional
-    assert b.transacoes[1][1][1][1] == "Editado"
-    reports.arquivar(b, "u@x.com", 9)
-    reports.restaurar(b, "u@x.com", 9)
-    cmds = [c[0].lstrip().split()[0].upper() for c in b.comandos]
-    assert cmds[-2:] == ["UPDATE", "UPDATE"] and "DELETE" not in " ".join(c[0].upper() for c in b.comandos)
+    assert [c[0].lstrip().split()[0].upper() for c in tx] == ["UPDATE", "INSERT", "INSERT"]       # tudo na MESMA transacao
+    upd = tx[0][0]
+    assert "urgencia = %s" in upd and "situacao = %s" in upd and "titulo" not in upd and "resolvido_em = COALESCE(resolvido_em, now())" in upd
+    assert tx[0][1][-1] == 5 and tx[1][1][2] == "urgencia" and tx[1][1][3:] == ("Média", "Crítica")
+    assert "DELETE" not in " ".join(c[0].upper() for c in tx)
+    # reabrir limpa a data de resolucao
+    b2 = BancoFalso()
+    res = _item(6, sit="resolvida", resolvido=dt.datetime(2026, 10, 28))
+    nv = {c: res[c] for c in reports.CAMPOS}
+    nv["situacao"] = "acompanhamento"
+    reports.atualizar(b2, "u@x.com", 6, res, nv)
+    assert "resolvido_em = NULL" in b2.transacoes[0][0][0]
+    # mudar so a nota nao mexe na data de resolucao
+    b3 = BancoFalso()
+    nv2 = {c: res[c] for c in reports.CAMPOS}
+    nv2["nota_diretor"] = "ok"
+    reports.atualizar(b3, "u@x.com", 6, res, nv2)
+    assert "resolvido_em" not in b3.transacoes[0][0][0]
+
+
+def test_kpis_e_series():
+    itens = [
+        _item(1, "Fulana Silva", urg="critica"), _item(2, "Fulana Silva", urg="alta", sit="acompanhamento"), _item(3, "Beto Souza", urg="baixa"),
+        _item(4, "Beto Souza", sit="resolvida", recebido=dt.datetime(2026, 10, 20), resolvido=dt.datetime(2026, 10, 24)),
+        _item(5, "Ciro Lima", sit="arquivada", urg="critica"),
+        _item(6, "Ciro Lima", sit="resolvida", recebido=dt.datetime(2026, 8, 1), resolvido=dt.datetime(2026, 8, 3)),
+    ]
+    k = reports.kpis(itens, HOJE)
+    assert (k["abertas"], k["urgentes"], k["criticas"], k["resolvidas_30d"], k["colaboradores_com_aberta"]) == (3, 2, 1, 1, 2)
+    assert k["dias_medios_para_resolver"] == 3.0                                          # (4 + 2) / 2
+    assert reports.kpis([], HOJE)["dias_medios_para_resolver"] is None
+    ab = reports.abertas_por_colaborador(itens)
+    assert list(ab.index) == ["Fulana Silva", "Beto Souza"] and list(ab.columns) == ["Baixa", "Média", "Alta", "Crítica"]
+    assert ab.loc["Fulana Silva", "Crítica"] == 1 and ab.loc["Beto Souza", "Baixa"] == 1
+    assert reports.abertas_por_colaborador([_item(1, sit="resolvida")]).empty
+    ss = reports.serie_semanal(itens)
+    assert ss.loc["26/10/2026", "Dificuldade"] == 6
+    nr = reports.novos_x_resolvidos(itens)
+    assert nr.loc["26/10/2026", "Novos"] == 6 and nr.loc["19/10/2026", "Resolvidos"] == 1 and nr.loc["03/08/2026", "Resolvidos"] == 1
+    assert reports.serie_semanal([]).empty and reports.novos_x_resolvidos([]).empty
+
+
+def test_ferramenta_pendencias_do_chat():
+    itens = [_item(1, "Fulana Silva", urg="critica", titulo="Sem acesso ao ERP"), _item(2, "Beto Souza", urg="baixa"),
+             _item(3, "Ciro Lima", sit="resolvida", resolvido=dt.datetime(2026, 10, 28)), _item(4, reports.SEM_NOME, urg="alta")]
+    ctx = FERR.Contexto(BancoFalso([[{"a": True, "b": True}], itens]), [], {})
+    r, tab = FERR.executar(ctx, "pendencias", {})
+    assert r["encontrados"] == 3 and r["itens"][0]["urgencia"] == "Crítica" and r["itens"][0]["colaborador"] == "Fulana"      # so' primeiro nome; mais urgente primeiro
+    assert r["itens"][1]["colaborador"] == reports.SEM_NOME and r["resumo_geral"]["em_aberto"] == 3 and tab
+    ctx = FERR.Contexto(BancoFalso([[{"a": True, "b": True}], itens]), [], {})
+    r, _ = FERR.executar(ctx, "pendencias", {"situacao": "resolvida", "colaborador": "ciro"})
+    assert r["encontrados"] == 1 and r["itens"][0]["colaborador"] == "Ciro"
+    # SQL-04 ainda nao rodado: resposta clara, sem quebrar
+    r, _ = FERR.executar(FERR.Contexto(BancoFalso([[{"a": False, "b": False}]]), [], {}), "pendencias", {})
+    assert "SQL-04" in r["aviso"]
 
 
 class _Cur:
