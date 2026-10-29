@@ -4,11 +4,12 @@ import pandas as pd
 import streamlit as st
 
 import base
+import detalhe_ui
 import graficos
 import catalogo
 import metricas_dados as md
 import painel
-from texto import limpar_texto
+import reports
 
 banco, usuario, papel = base.contexto()
 st.title("Categorias")
@@ -40,17 +41,27 @@ if not atuais_item:
 else:
     st.markdown("**Último valor gravado (por empresa/obra/UN, quando houver)**")
     st.dataframe(pd.DataFrame(painel.linhas_detalhe(atuais_item)), hide_index=True, width="stretch")
+    try:
+        hist = md.ler_historico(banco, item_id)                 # so' deste item (alimenta os avisos de variacao e o historico abaixo)
+    except Exception as exc:                                    # noqa: BLE001
+        base.falha(banco, "categorias", "ler_historico", exc, usuario)
+        hist = []
+    st.markdown("**Detalhe do número (o que está por trás do valor)**")
     for l in atuais_item:
-        det = limpar_texto(l.get("detalhe"), 1500)
-        if det:
-            with st.expander(f'Como o número foi apurado — {l.get("empresa") or "geral"} {l.get("obra") or ""}'.strip()):
-                st.text(det)
+        nome = " · ".join(x for x in (l.get("empresa"), l.get("obra"), l.get("un")) if x) or "geral"
+        with st.expander(f'{nome} — {md.periodo_br(l.get("periodo"))}', expanded=len(atuais_item) == 1):
+            detalhe_ui.mostrar(l, hist)
+    try:                                                        # pendencias em aberto que o Diretor vinculou a este indicador (nao trava a tela se falhar)
+        ligadas = [i for i in reports.listar(banco) if i.get("vinculo_item_id") == item_id and i["situacao"] in reports.ABERTAS] if reports.instalado(banco) else []
+    except Exception:                                           # noqa: BLE001
+        ligadas = []
+    if ligadas:
+        st.markdown("**Pendências em aberto ligadas a este indicador**")
+        ROT = {"critica": "🔴 Crítica", "alta": "🟠 Alta", "media": "🟡 Média", "baixa": "⚪ Baixa"}
+        st.dataframe(pd.DataFrame([{"Nº": i["id"], "Colaborador": i["colaborador"], "Urgência": ROT[i["urgencia"]], "Título": i.get("titulo") or "", "Semana": i["semana_de"]} for i in ligadas]),
+                     hide_index=True, width="stretch", column_config={"Semana": st.column_config.DateColumn("Semana", format="DD/MM/YYYY")})
+        st.caption("Para ver ou editar, abra **Reports e pendências**.")
     if st.toggle("Mostrar histórico mês a mês", key="cat_hist"):
-        try:
-            hist = md.ler_historico(banco, item_id)
-        except Exception as exc:                                # noqa: BLE001
-            base.falha(banco, "categorias", "ler_historico", exc, usuario)
-            hist = []
         if hist:
             serie = {}
             for h in hist:

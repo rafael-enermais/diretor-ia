@@ -11,7 +11,8 @@ HOJE = dt.date(2026, 10, 29)
 
 def _item(id_, colab="Fulana Silva", semana=dt.date(2026, 10, 26), tipo="dificuldade", urg="media", sit="nova", recebido=dt.datetime(2026, 10, 27, 9), resolvido=None, titulo="t"):
     return {"id": id_, "origem": "manual", "id_externo": None, "colaborador": colab, "semana_de": semana, "tipo": tipo, "urgencia": urg, "situacao": sit, "titulo": titulo,
-            "descricao": "d", "nota_diretor": None, "recebido_em": recebido, "resolvido_em": resolvido, "criado_por": "u", "atualizado_em": recebido, "atualizado_por": None}
+            "descricao": "d", "nota_diretor": None, "recebido_em": recebido, "resolvido_em": resolvido, "criado_por": "u", "atualizado_em": recebido, "atualizado_por": None,
+            "vinculo_item_id": None, "vinculo_recusados": None}
 
 
 def test_segunda_da_semana():
@@ -20,8 +21,9 @@ def test_segunda_da_semana():
 
 
 def test_instalado_so_com_as_duas_tabelas():
-    assert reports.instalado(BancoFalso([[{"a": True, "b": True}]])) is True
-    assert reports.instalado(BancoFalso([[{"a": True, "b": False}]])) is False
+    assert reports.instalado(BancoFalso([[{"a": True, "b": True, "c": True}]])) is True
+    assert reports.instalado(BancoFalso([[{"a": True, "b": False, "c": True}]])) is False
+    assert reports.instalado(BancoFalso([[{"a": True, "b": True, "c": False}]])) is False           # SQL-05 (colunas de vinculo) ainda nao rodado
     assert reports.instalado(BancoFalso([[]])) is False
     assert reports.instalado(BancoFalso(falhar=True)) is False                              # erro de banco: a tela explica, nao quebra
 
@@ -114,16 +116,16 @@ def test_kpis_e_series():
 def test_ferramenta_pendencias_do_chat():
     itens = [_item(1, "Fulana Silva", urg="critica", titulo="Sem acesso ao ERP"), _item(2, "Beto Souza", urg="baixa"),
              _item(3, "Ciro Lima", sit="resolvida", resolvido=dt.datetime(2026, 10, 28)), _item(4, reports.SEM_NOME, urg="alta")]
-    ctx = FERR.Contexto(BancoFalso([[{"a": True, "b": True}], itens]), [], {})
+    ctx = FERR.Contexto(BancoFalso([[{"a": True, "b": True, "c": True}], itens]), [], {})
     r, tab = FERR.executar(ctx, "pendencias", {})
     assert r["encontrados"] == 3 and r["itens"][0]["urgencia"] == "Crítica" and r["itens"][0]["colaborador"] == "Fulana"      # so' primeiro nome; mais urgente primeiro
     assert r["itens"][1]["colaborador"] == reports.SEM_NOME and r["resumo_geral"]["em_aberto"] == 3 and tab
-    ctx = FERR.Contexto(BancoFalso([[{"a": True, "b": True}], itens]), [], {})
+    ctx = FERR.Contexto(BancoFalso([[{"a": True, "b": True, "c": True}], itens]), [], {})
     r, _ = FERR.executar(ctx, "pendencias", {"situacao": "resolvida", "colaborador": "ciro"})
     assert r["encontrados"] == 1 and r["itens"][0]["colaborador"] == "Ciro"
     # SQL-04 ainda nao rodado: resposta clara, sem quebrar
-    r, _ = FERR.executar(FERR.Contexto(BancoFalso([[{"a": False, "b": False}]]), [], {}), "pendencias", {})
-    assert "SQL-04" in r["aviso"]
+    r, _ = FERR.executar(FERR.Contexto(BancoFalso([[{"a": False, "b": False, "c": False}]]), [], {}), "pendencias", {})
+    assert "SQL-04" in r["aviso"] and "SQL-05" in r["aviso"]
 
 
 class _Cur:

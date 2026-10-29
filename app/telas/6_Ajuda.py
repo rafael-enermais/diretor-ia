@@ -1,50 +1,61 @@
 # -*- coding: utf-8 -*-
-"""Diretor.IA - Ajuda em linguagem simples. O administrador ve tambem o bloco tecnico."""
+"""Diretor.IA - Ajuda em linguagem simples. O conteudo das telas, termos e perguntas vem de guia_app.py (a mesma fonte do Assistente). O administrador ve tambem o bloco tecnico."""
 import streamlit as st
 
 import acesso
 import base
+import guia_app as G
 
 banco, usuario, papel = base.contexto()
+admin = papel == acesso.ADMIN
 st.title("Ajuda")
 
 st.markdown(
     """
-**Para que serve este painel.** Ele reúne, num lugar só, os **indicadores** e os **entregáveis** da matriz de metas da Diretoria Financeira, organizados por categoria.
-O painel **só lê** o que os outros apps já calcularam (por exemplo, o GDF). Ele não recalcula nada: o número que aparece aqui é o mesmo do app de origem.
+**Para que serve este painel.** Ele reúne, num lugar só, os **indicadores** e os **entregáveis** da matriz de metas da Diretoria Financeira, organizados por categoria, e guarda os
+**reports e pendências** que chegam dos colaboradores. O painel **só lê** o que os outros apps já calcularam (por exemplo, o GDF): o número que aparece aqui é o mesmo do app de origem.
+É uma ajuda à gestão, não uma trava: nada é obrigatório e nada é apagado.
 
-**Telas**
-- **Visão geral** — quantos indicadores e entregáveis existem, quantos já têm valor e como estão (no alvo, atenção, fora da meta).
-- **Painel executivo** — o retrato do momento em gráficos: pontos de atenção, situação por categoria, evolução de cada indicador com **tendência simples** (a partir de 3 meses gravados) e comparação lado a lado. Atualiza sozinho a cada 1 minuto. A tendência é só uma reta sobre os meses já gravados: não é previsão oficial.
-- **Assistente (IA)** — converse em português sobre os indicadores e entregáveis (o que está fora da meta, a evolução e a tendência de um indicador, prazos). Ele **só lê** o que o painel mostra, não grava nada, não mostra links e avisa quando um valor da resposta não bate com as consultas. Avisa quando você passa de 60 perguntas no dia (cada uma usa crédito da IA) e só para em 200, como segurança.
-- **Categorias** — escolha uma categoria para ver cada indicador, o último valor, a meta e o status. Abra o detalhe para ver como o número foi apurado e o histórico mês a mês.
-- **Entregáveis** — os entregáveis, com responsável, prazo, meta e resultado quando houver.
-- **Reports e pendências** — as dificuldades, pendências, problemas e evoluções que os colaboradores relatam (chegam dos outros apps ou você digita). Cada item tem tipo, urgência (baixa a crítica), situação (nova, em acompanhamento, resolvida, arquivada) e uma nota sua. Nenhum campo é obrigatório: edite direto na tabela, e a situação «Arquivada» tira da lista sem apagar. Cada mudança fica guardada no histórico, e a aba Evolução mostra novos × resolvidos, itens por semana e quem tem mais itens em aberto.
-- **Prontidão e fontes** — o que já está ligado a uma fonte e recebendo dado, e o que ainda falta chegar.
+**Dúvida na hora?** Pergunte ao **Assistente (IA)**, por exemplo: «como exporto as pendências?» ou «o que significa o aviso 👀?». Ele conhece este guia.
+"""
+)
 
-**Como ler o status**
-- 🟢 **No alvo** — dentro da meta.
-- 🟡 **Atenção** — perto do limite da meta.
-- 🔴 **Fora da meta** — fora da meta.
-- 🔵 **Só informativo** — já tem valor gravado, mas o app de origem não tem meta numérica para julgar (por exemplo, contas a receber). Conta como «com valor».
-- ⚪ **Sem lançamento** — o dado ainda não chegou. *Não significa que esteja ruim: significa que falta o número.*
-- Quando um indicador tem mais de uma linha (por empresa ou obra), o status do indicador é o **pior** entre elas, e o detalhe mostra cada linha.
+st.subheader("Como usar cada tela")
+for p in G.paginas(admin):
+    with st.expander(f'{p["titulo"]}' + ("  ·  só administrador" if p.get("so_admin") else "")):
+        st.markdown(f'**Para que serve.** {p["serve"]}')
+        if p["como"]:
+            st.markdown("**Como usar**\n\n" + "\n".join(f"{n}. {t}" for n, t in enumerate(p["como"], 1)))
+        if p["dicas"]:
+            st.markdown("**Bom saber**\n\n" + "\n".join(f"- {t}" for t in p["dicas"]))
 
+st.subheader("O que significa")
+for termo, expl in G.GLOSSARIO:
+    st.markdown(f"- **{termo}** — {expl}")
+
+st.subheader("Perguntas rápidas")
+for pergunta, resposta in G.PERGUNTAS:
+    with st.expander(pergunta):
+        st.markdown(resposta)
+
+st.markdown(
+    """
 **Quando o número chega.** Cada app de origem grava o resultado do mês; o painel relê o banco a cada 1 minuto (ou na hora, no botão **Atualizar agora**).
-Responsáveis aparecem só pelo primeiro nome.
+Responsáveis e colaboradores aparecem só pelo primeiro nome no Assistente.
 
 **Segurança.** O acesso é por e-mail e senha e só entra quem estiver liberado na lista de acesso do painel. Se o seu e-mail não está na lista, o painel recusa mesmo com senha certa.
 """
 )
 
-if papel == acesso.ADMIN:
+if admin:
     st.subheader("Para o administrador")
     st.markdown(
         """
 - **Código de erro.** Quando algo falha, a tela mostra um código `E-DIRETOR-AAMMDD-xxxx`. Procure esse código na tela **Logs (admin)** para ver o motivo técnico.
 - **Verificação técnica.** Em **Prontidão e fontes**, o botão *Rodar verificação agora* confere login do banco, catálogo (54 + 44), acesso, visões do GDF, permissões e proteção de linha.
 - **Depois de cada atualização do código (push).** No Streamlit Cloud, faça *Reboot* do app e confira a **versão** no pé do menu lateral.
-- **Segredos.** Ficam só em *Settings → Secrets* do Streamlit Cloud (`DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`). Nunca no GitHub.
+- **Segredos.** Ficam só em *Settings → Secrets* do Streamlit Cloud (`DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `ANTHROPIC_API_KEY`). Nunca no GitHub.
 - **Dar ou tirar acesso.** É feito no banco (tabela de acesso), por quem administra o banco. O app só lê essa tabela.
+- **Reports de outros apps.** Cada app de colaborador envia pela função `diretoria.receber_report` (veja o contrato no vault, `CONTRATO-RECEBER-REPORT`). O Diretor.IA só recebe; nada volta para o app de origem.
 """
     )

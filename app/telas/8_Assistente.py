@@ -89,7 +89,7 @@ if pergunta:
     with st.chat_message("assistant"):
         with st.spinner("Consultando os dados…"):
             itens, atuais, por_item = base.carregar_painel(banco, "assistente", usuario)
-            ctx = FERR.Contexto(banco, itens, por_item, historico_geral=base.carregar_historico(banco, "assistente", usuario))
+            ctx = FERR.Contexto(banco, itens, por_item, historico_geral=base.carregar_historico(banco, "assistente", usuario), papel=papel)
             t0 = time.time()
             res = CC.responder(_cliente(), ctx, modelo, msgs, pergunta, estado)
             ms = int((time.time() - t0) * 1000)

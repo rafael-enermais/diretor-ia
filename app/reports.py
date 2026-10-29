@@ -5,6 +5,7 @@ E' uma AJUDA a gestao, nao uma trava: nenhum campo e' obrigatorio (o que faltar 
 from __future__ import annotations
 
 import datetime as dt
+import re
 
 from texto import limpar_texto
 
@@ -14,9 +15,10 @@ SITUACOES = {"nova": "Nova", "acompanhamento": "Em acompanhamento", "resolvida":
 ABERTAS = ("nova", "acompanhamento")
 SEM_NOME = "Não informado"
 # campos que o Diretor pode editar na tabela (ordem = ordem do historico)
-CAMPOS = ("colaborador", "semana_de", "tipo", "urgencia", "situacao", "titulo", "descricao", "nota_diretor")
+CAMPOS = ("colaborador", "semana_de", "tipo", "urgencia", "situacao", "titulo", "descricao", "nota_diretor", "vinculo_item_id")
 ROTULO_CAMPO = {"colaborador": "Colaborador", "semana_de": "Semana", "tipo": "Tipo", "urgencia": "Urgência", "situacao": "Situação",
-                "titulo": "Título", "descricao": "Descrição", "nota_diretor": "Nota do Diretor", "criado": "Criado", "conteudo_atualizado": "Conteúdo atualizado pelo app"}
+                "titulo": "Título", "descricao": "Descrição", "nota_diretor": "Nota do Diretor", "vinculo_item_id": "Vínculo (indicador/entregável)",
+                "vinculo_recusado": "Vínculo sugerido e recusado", "criado": "Criado", "conteudo_atualizado": "Conteúdo atualizado pelo app"}
 
 
 def segunda_da_semana(d: dt.date) -> dt.date:
@@ -24,15 +26,17 @@ def segunda_da_semana(d: dt.date) -> dt.date:
 
 
 def instalado(banco) -> bool:
-    """O SQL-04 ja foi rodado? (as 2 tabelas existem). Erro de banco => False (a tela explica, nao quebra)."""
+    """O SQL-04 (tabelas) e o SQL-05 (colunas de vinculo) ja foram rodados? Erro de banco => False (a tela explica, nao quebra)."""
     try:
-        r = banco.consultar("SELECT to_regclass('diretoria.report_item') IS NOT NULL AS a, to_regclass('diretoria.report_item_historico') IS NOT NULL AS b")
-        return bool(r and r[0]["a"] and r[0]["b"])
+        r = banco.consultar("""SELECT to_regclass('diretoria.report_item') IS NOT NULL AS a, to_regclass('diretoria.report_item_historico') IS NOT NULL AS b,
+                                      (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'diretoria' AND table_name = 'report_item'
+                                          AND column_name IN ('vinculo_item_id', 'vinculo_recusados')) = 2 AS c""")
+        return bool(r and r[0]["a"] and r[0]["b"] and r[0]["c"])
     except Exception:                                           # noqa: BLE001
         return False
 
 
-def validar(dados: dict, hoje: dt.date | None = None):
+def validar(dados: dict, hoje: dt.date | None = None, validos: set | None = None):
     """Devolve (dados_limpos, avisos). NAO bloqueia: o que faltar ou vier estranho ganha valor padrao e vira um aviso simples (a tela salva do mesmo jeito)."""
     avisos = []
     hoje = hoje or dt.date.today()
@@ -48,13 +52,17 @@ def validar(dados: dict, hoje: dt.date | None = None):
     tipo = dados.get("tipo") if dados.get("tipo") in TIPOS else "dificuldade"
     urg = dados.get("urgencia") if dados.get("urgencia") in URGENCIAS else "media"
     sit = dados.get("situacao") if dados.get("situacao") in SITUACOES else "nova"
-    return {"colaborador": colab, "semana_de": semana, "tipo": tipo, "urgencia": urg, "situacao": sit,
+    vinc = limpar_texto(dados.get("vinculo_item_id"), 10).upper() or None
+    if vinc and (not re.fullmatch(r"[IE]\d{2}", vinc) or (validos is not None and vinc not in validos)):
+        avisos.append(f"O vínculo «{vinc}» não existe no catálogo: ficou sem vínculo.")
+        vinc = None
+    return {"colaborador": colab, "semana_de": semana, "tipo": tipo, "urgencia": urg, "situacao": sit, "vinculo_item_id": vinc,
             "titulo": limpar_texto(dados.get("titulo"), 200) or None, "descricao": limpar_texto(dados.get("descricao"), 4000) or None,
             "nota_diretor": limpar_texto(dados.get("nota_diretor"), 4000) or None}, avisos
 
 
 _SQL_LISTAR = """SELECT id, origem, id_externo, colaborador, semana_de, tipo, urgencia, situacao, titulo, descricao, nota_diretor,
-                        recebido_em, resolvido_em, criado_por, atualizado_em, atualizado_por
+                        recebido_em, resolvido_em, criado_por, atualizado_em, atualizado_por, vinculo_item_id, vinculo_recusados
                  FROM diretoria.report_item ORDER BY semana_de DESC, id DESC LIMIT %s"""
 
 
@@ -67,15 +75,34 @@ def historico(banco, item_id: int, limite: int = 200) -> list:
                            (int(item_id), min(int(limite), 1000)))
 
 
+def historico_geral(banco, ids: list, limite: int = 5000) -> list:
+    """Historico de varios itens de uma vez (para a planilha de exportacao)."""
+    if not ids:
+        return []
+    return banco.consultar("SELECT item_id, em, por, campo, de, para FROM diretoria.report_item_historico WHERE item_id = ANY(%s) ORDER BY item_id, id LIMIT %s",
+                           ([int(i) for i in ids], min(int(limite), 20000)))
+
+
+def recusar_vinculo(banco, usuario: str, item_id: int, recusados_atuais, vinculo_id: str) -> None:
+    """O usuario disse 'nao e' esse': guarda para nao sugerir de novo (+ linha no historico). Nao mexe no vinculo confirmado."""
+    ja = {x for x in str(recusados_atuais or "").split(",") if re.fullmatch(r"[IE]\d{2}", x)}
+    if not re.fullmatch(r"[IE]\d{2}", str(vinculo_id)):
+        raise ValueError("vinculo invalido")
+    novo = ",".join(sorted(ja | {vinculo_id}))[:200]
+    banco.executar_varios([
+        ("UPDATE diretoria.report_item SET vinculo_recusados = %s, atualizado_em = now(), atualizado_por = %s WHERE id = %s", (novo, usuario, int(item_id))),
+        ("INSERT INTO diretoria.report_item_historico (item_id, por, campo, para) VALUES (%s,%s,%s,%s)", (int(item_id), usuario, "vinculo_recusado", vinculo_id))])
+
+
 def criar(banco, usuario: str, dados: dict) -> None:
     """Item novo + linha 'criado' no historico, em UM comando (ou tudo ou nada)."""
     banco.executar(
         """WITH n AS (
-               INSERT INTO diretoria.report_item (origem, colaborador, semana_de, tipo, urgencia, situacao, titulo, descricao, nota_diretor, criado_por, resolvido_em)
-               VALUES ('manual', %s, %s, %s, %s, %s, %s, %s, %s, %s, CASE WHEN %s = 'resolvida' THEN now() END) RETURNING id)
+               INSERT INTO diretoria.report_item (origem, colaborador, semana_de, tipo, urgencia, situacao, titulo, descricao, nota_diretor, criado_por, vinculo_item_id, resolvido_em)
+               VALUES ('manual', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CASE WHEN %s = 'resolvida' THEN now() END) RETURNING id)
            INSERT INTO diretoria.report_item_historico (item_id, por, campo, para) SELECT id, %s, 'criado', %s FROM n""",
         (dados["colaborador"], dados["semana_de"], dados["tipo"], dados["urgencia"], dados["situacao"], dados["titulo"], dados["descricao"], dados["nota_diretor"],
-         usuario, dados["situacao"], usuario, f'{dados["tipo"]} / {dados["urgencia"]}'))
+         usuario, dados.get("vinculo_item_id"), dados["situacao"], usuario, f'{dados["tipo"]} / {dados["urgencia"]}'))
 
 
 def _txt(v, limite: int = 300):
