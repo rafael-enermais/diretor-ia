@@ -78,10 +78,12 @@ desenhar_grafico(estado.get("grafico"), estado.get("ultima_tabela"))
 digitada = st.chat_input("Pergunte ao assistente…", max_chars=CC.MAX_PERGUNTA)  # sempre desenhada (v0.2.1): antes, clicar numa sugestão escondia a caixa
 pergunta = pendente or digitada
 if pergunta:
-    limite_ok = (MEM.perguntas_hoje(banco, usuario) < MEM.LIMITE_PERGUNTAS_DIA) if inst else (S["dir_chat_n"] < 40)
-    if not limite_ok:
-        st.warning("Você atingiu o limite de perguntas por dia para controlar o custo da IA. Volte amanhã ou fale com quem administra o painel.")
+    feitas = MEM.perguntas_hoje(banco, usuario) if inst else S["dir_chat_n"]
+    if feitas >= (MEM.TETO_PERGUNTAS_DIA if inst else 100):
+        st.warning("Chegou no teto de segurança de perguntas por dia (é só para evitar um gasto inesperado com a IA). Volte amanhã ou fale com quem administra o painel.")
         st.stop()
+    if feitas >= MEM.AVISO_PERGUNTAS_DIA:
+        st.info(f"Você já fez {feitas} perguntas hoje. Pode continuar; só lembrando que cada pergunta usa crédito da IA.")
     with st.chat_message("user"):
         st.markdown(pergunta.replace("$", "\\$"))
     with st.chat_message("assistant"):

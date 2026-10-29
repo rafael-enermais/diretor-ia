@@ -16,10 +16,10 @@ O painel **só lê** o que os outros apps já calcularam (por exemplo, o GDF). E
 **Telas**
 - **Visão geral** — quantos indicadores e entregáveis existem, quantos já têm valor e como estão (no alvo, atenção, fora da meta).
 - **Painel executivo** — o retrato do momento em gráficos: pontos de atenção, situação por categoria, evolução de cada indicador com **tendência simples** (a partir de 3 meses gravados) e comparação lado a lado. Atualiza sozinho a cada 1 minuto. A tendência é só uma reta sobre os meses já gravados: não é previsão oficial.
-- **Assistente (IA)** — converse em português sobre os indicadores e entregáveis (o que está fora da meta, a evolução e a tendência de um indicador, prazos). Ele **só lê** o que o painel mostra, não grava nada, não mostra links e avisa quando um valor da resposta não bate com as consultas. Tem limite diário de perguntas para controlar o custo.
+- **Assistente (IA)** — converse em português sobre os indicadores e entregáveis (o que está fora da meta, a evolução e a tendência de um indicador, prazos). Ele **só lê** o que o painel mostra, não grava nada, não mostra links e avisa quando um valor da resposta não bate com as consultas. Avisa quando você passa de 60 perguntas no dia (cada uma usa crédito da IA) e só para em 200, como segurança.
 - **Categorias** — escolha uma categoria para ver cada indicador, o último valor, a meta e o status. Abra o detalhe para ver como o número foi apurado e o histórico mês a mês.
 - **Entregáveis** — os entregáveis, com responsável, prazo, meta e resultado quando houver.
-- **Reports recebidos** — um registro simples dos reports semanais que você recebeu (quem enviou, resumo, dificuldades). O report completo fica no app de quem o escreve.
+- **Reports recebidos** — um registro simples dos reports semanais que você recebeu (quem enviou, resumo, dificuldades). Nenhum campo é obrigatório: a tabela é editável na própria tela, e «Arquivar» tira da lista sem apagar (dá para restaurar). O report completo fica no app de quem o escreve.
 - **Prontidão e fontes** — o que já está ligado a uma fonte e recebendo dado, e o que ainda falta chegar.
 
 **Como ler o status**

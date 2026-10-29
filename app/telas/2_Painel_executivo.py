@@ -73,7 +73,7 @@ def corpo():
         st.caption(f'{tend["motivo"]} A linha de tendência aparece sozinha quando houver meses suficientes.')
 
     st.subheader("Comparar indicadores lado a lado")
-    escolha = st.multiselect("Indicadores (mesma unidade)", list(rot), max_selections=3, key="pe_comp")
+    escolha = st.multiselect("Indicadores (mesma unidade)", list(rot), max_selections=5, key="pe_comp")
     if len(escolha) >= 2:
         sel = [rot[e] for e in escolha]
         if len({y["unidade"] for y in sel}) > 1:

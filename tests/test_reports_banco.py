@@ -11,16 +11,19 @@ def test_segunda_da_semana():
     assert reports.segunda_da_semana(dt.date(2026, 10, 26)) == dt.date(2026, 10, 26)
 
 
-def test_validar_ok_e_erros():
-    d, e = reports.validar({"semana_de": dt.date(2026, 10, 29), "de_quem": "  Fulano  ", "resumo": "ok\x00", "dificuldades": "", "recebido_em": None, "status": "tratado"})
-    assert not e and d["semana_de"] == dt.date(2026, 10, 26) and d["de_quem"] == "Fulano" and d["resumo"] == "ok" and d["dificuldades"] is None
-    _, e = reports.validar({"semana_de": None, "de_quem": "x", "status": "?"})
-    assert len(e) == 3                                                                   # semana, de quem curto, situacao
-    d, e = reports.validar({"semana_de": dt.date(2026, 10, 26), "de_quem": "Fulano", "resumo": "a" * 5000})
-    assert not e and len(d["resumo"]) == 4000
+def test_validar_nao_bloqueia_e_avisa():
+    d, av = reports.validar({"semana_de": dt.date(2026, 10, 29), "de_quem": "  Fulano  ", "resumo": "ok\x00", "dificuldades": "", "recebido_em": None, "status": "tratado"})
+    assert not av and d["semana_de"] == dt.date(2026, 10, 26) and d["de_quem"] == "Fulano" and d["resumo"] == "ok" and d["dificuldades"] is None
+    # tudo em branco/estranho: salva do mesmo jeito, com valores padrao e avisos em linguagem simples
+    d, av = reports.validar({"semana_de": None, "de_quem": "x", "status": "?"}, dt.date(2026, 10, 29))
+    assert len(av) == 2 and d["de_quem"] == reports.SEM_NOME and d["semana_de"] == dt.date(2026, 10, 26) and d["status"] == "recebido"
+    d, av = reports.validar({}, dt.date(2026, 10, 28))
+    assert d["de_quem"] == reports.SEM_NOME and d["resumo"] is None and d["recebido_em"] is None
+    d, av = reports.validar({"semana_de": dt.date(2026, 10, 26), "de_quem": "Fulano", "resumo": "a" * 5000})
+    assert not av and len(d["resumo"]) == 4000
 
 
-def test_criar_e_revisar_usam_so_insert_e_update():
+def test_criar_revisar_arquivar_restaurar_sem_delete():
     dados, _ = reports.validar({"semana_de": dt.date(2026, 10, 26), "de_quem": "Fulano"})
     b = BancoFalso()
     reports.criar(b, "u@x.com", dados)
@@ -28,12 +31,13 @@ def test_criar_e_revisar_usam_so_insert_e_update():
     reports.revisar(b, "u@x.com", 7, dados, "corrigi a semana")
     tx = b.transacoes[0]
     assert [c[0].lstrip().split()[0].upper() for c in tx] == ["INSERT", "UPDATE"]        # na MESMA transacao; nenhum DELETE
-    assert tx[0][1][-1] == 7 and tx[1][1][-1] == 7
-    try:
-        reports.revisar(b, "u@x.com", 7, dados, " ")
-    except ValueError:
-        return
-    raise AssertionError("revisar sem motivo deveria falhar")
+    assert tx[0][1][-1] == 7 and tx[1][1][-1] == 7 and tx[1][1][1] == "corrigi a semana"
+    reports.revisar(b, "u@x.com", 8, dados)                                              # motivo e' opcional
+    assert b.transacoes[1][1][1][1] == "Editado"
+    reports.arquivar(b, "u@x.com", 9)
+    reports.restaurar(b, "u@x.com", 9)
+    cmds = [c[0].lstrip().split()[0].upper() for c in b.comandos]
+    assert cmds[-2:] == ["UPDATE", "UPDATE"] and "DELETE" not in " ".join(c[0].upper() for c in b.comandos)
 
 
 class _Cur:

@@ -6,7 +6,8 @@ from __future__ import annotations
 
 JANELA = 24
 MAX_CONTEUDO = 6000
-LIMITE_PERGUNTAS_DIA = 60          # por usuario, por dia (trava de custo; vale quando o SQL-03 existe; sem ele, o limite e' da sessao)
+AVISO_PERGUNTAS_DIA = 60           # a partir daqui a tela so' AVISA (cada pergunta usa credito da IA); nao bloqueia
+TETO_PERGUNTAS_DIA = 200           # teto de seguranca por usuario/dia (vale com o SQL-03; sem ele, o teto e' 100 por sessao)
 
 
 def instalado(banco) -> bool:
